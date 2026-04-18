@@ -1,0 +1,1060 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgriTrack - Smart Crop Lifecycle & Farm Management System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%);
+            min-height: 100vh;
+            color: #1a3c34;
+        }
+
+        /* Navigation */
+        .navbar {
+            background: linear-gradient(135deg, #1e4a3b 0%, #0f3b2f 100%);
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+
+        .nav-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .logo i {
+            font-size: 2rem;
+            color: #ffd966;
+        }
+
+        .logo h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: white;
+        }
+
+        .logo p {
+            font-size: 0.75rem;
+            color: rgba(255,255,255,0.8);
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .nav-btn {
+            background: rgba(255,255,255,0.1);
+            border: none;
+            padding: 0.6rem 1.2rem;
+            border-radius: 12px;
+            color: white;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .nav-btn:hover, .nav-btn.active {
+            background: #ffd966;
+            color: #1e4a3b;
+            transform: translateY(-2px);
+        }
+
+        .user-badge {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            background: rgba(255,255,255,0.15);
+            padding: 0.5rem 1rem;
+            border-radius: 30px;
+        }
+
+        .user-badge i {
+            font-size: 1.2rem;
+            color: #ffd966;
+        }
+
+        .user-badge span {
+            color: white;
+            font-weight: 500;
+        }
+
+        /* Main Container */
+        .main-container {
+            max-width: 1400px;
+            margin: 2rem auto;
+            padding: 0 2rem;
+        }
+
+        /* Notification System */
+        .notification-container {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .notification {
+            background: white;
+            border-radius: 12px;
+            padding: 1rem 1.5rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            animation: slideIn 0.3s ease;
+            max-width: 350px;
+        }
+
+        .notification.success { border-left: 4px solid #2e7d32; }
+        .notification.error { border-left: 4px solid #c62828; }
+        .notification.info { border-left: 4px solid #1976d2; }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 24px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 30px rgba(0,0,0,0.1);
+        }
+
+        .stat-icon {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #e8f5e9, #c8e6d9);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1rem;
+        }
+
+        .stat-icon i {
+            font-size: 1.8rem;
+            color: #1e4a3b;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1a3c34;
+        }
+
+        .stat-label {
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+
+        /* Sections */
+        .section {
+            background: white;
+            border-radius: 28px;
+            padding: 1.8rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .section-header h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #1e4a3b;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        /* Buttons */
+        .btn-primary {
+            background: linear-gradient(135deg, #1e4a3b, #0f3b2f);
+            color: white;
+            border: none;
+            padding: 0.7rem 1.5rem;
+            border-radius: 40px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(30,74,59,0.3);
+        }
+
+        .btn-secondary {
+            background: #e9ecef;
+            color: #1e4a3b;
+            border: none;
+            padding: 0.5rem 1.2rem;
+            border-radius: 40px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-secondary:hover {
+            background: #dee2e6;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 0.4rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+        }
+
+        /* Tables */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .data-table th {
+            text-align: left;
+            padding: 1rem 0.75rem;
+            background: #f8f9fa;
+            color: #1e4a3b;
+            font-weight: 600;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .data-table td {
+            padding: 1rem 0.75rem;
+            border-bottom: 1px solid #f0f0f0;
+            color: #495057;
+        }
+
+        .data-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        /* Status Badges */
+        .status-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 30px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .status-planted { background: #fff3e0; color: #cc7b2c; }
+        .status-growing { background: #e3f2fd; color: #1976d2; }
+        .status-ready { background: #e8f5e9; color: #2e7d32; }
+        .status-harvested { background: #f3e5f5; color: #7b1fa2; }
+        .status-healthy { background: #e8f5e9; color: #2e7d32; }
+        .status-pest { background: #ffebee; color: #c62828; }
+        .status-disease { background: #fff3e0; color: #ef6c00; }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #6c757d;
+        }
+
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        /* Timeline */
+        .timeline {
+            position: relative;
+            padding-left: 2rem;
+        }
+
+        .timeline-item {
+            position: relative;
+            padding-bottom: 1.5rem;
+            border-left: 2px solid #e0e0e0;
+            padding-left: 1.5rem;
+            margin-left: 0.5rem;
+        }
+
+        .timeline-item:before {
+            content: '';
+            position: absolute;
+            left: -0.6rem;
+            top: 0;
+            width: 1rem;
+            height: 1rem;
+            border-radius: 50%;
+            background: #1e4a3b;
+        }
+
+        .timeline-date {
+            font-size: 0.8rem;
+            color: #6c757d;
+            margin-bottom: 0.25rem;
+        }
+
+        .timeline-title {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 28px;
+            padding: 2rem;
+            max-width: 550px;
+            width: 90%;
+            max-height: 85vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #6c757d;
+        }
+
+        /* Form */
+        .form-group {
+            margin-bottom: 1.2rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: #1e4a3b;
+        }
+
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid #dee2e6;
+            border-radius: 12px;
+            font-family: inherit;
+            transition: all 0.2s ease;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #1e4a3b;
+            box-shadow: 0 0 0 3px rgba(30,74,59,0.1);
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .crop-card {
+            background: #f8f9fa;
+            border-radius: 16px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .crop-card:hover {
+            background: #e9ecef;
+            transform: translateX(5px);
+        }
+
+        @media (max-width: 768px) {
+            .nav-container { flex-direction: column; }
+            .main-container { padding: 0 1rem; }
+            .stats-grid { grid-template-columns: 1fr 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="logo">
+                <i class="fas fa-leaf"></i>
+                <div>
+                    <h1>AgriTrack</h1>
+                    <p>Smart Crop Lifecycle Management</p>
+                </div>
+            </div>
+            <div class="nav-links">
+                <button class="nav-btn active" data-page="dashboard"><i class="fas fa-chart-line"></i> Dashboard</button>
+                <button class="nav-btn" data-page="crops"><i class="fas fa-seedling"></i> Crops</button>
+                <button class="nav-btn" data-page="activities"><i class="fas fa-tasks"></i> Activities</button>
+                <button class="nav-btn" data-page="inventory"><i class="fas fa-warehouse"></i> Inventory</button>
+                <button class="nav-btn" data-page="sales"><i class="fas fa-chart-simple"></i> Sales</button>
+            </div>
+            <div class="user-badge">
+                <i class="fas fa-user-circle"></i>
+                <span>Eric Farmer (Admin)</span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="notification-container" id="notificationContainer"></div>
+
+    <div class="main-container" id="app">
+        <!-- Dashboard Page -->
+        <div id="dashboard-page" class="page-content">
+            <div class="stats-grid" id="stats-grid"></div>
+            <div class="section">
+                <div class="section-header">
+                    <h2><i class="fas fa-history"></i> Recent Activities</h2>
+                </div>
+                <div id="recent-activities"></div>
+            </div>
+            <div class="section">
+                <div class="section-header">
+                    <h2><i class="fas fa-heartbeat"></i> Crop Health Summary</h2>
+                </div>
+                <div id="health-summary"></div>
+            </div>
+        </div>
+
+        <!-- Crops Page -->
+        <div id="crops-page" class="page-content hidden">
+            <div class="section">
+                <div class="section-header">
+                    <h2><i class="fas fa-seedling"></i> Crop Management</h2>
+                    <button class="btn-primary" onclick="openCropModal()"><i class="fas fa-plus"></i> New Crop</button>
+                </div>
+                <div id="crops-list"></div>
+            </div>
+        </div>
+
+        <!-- Activities Page -->
+        <div id="activities-page" class="page-content hidden">
+            <div class="section">
+                <div class="section-header">
+                    <h2><i class="fas fa-clipboard-list"></i> Farm Activities</h2>
+                    <button class="btn-primary" onclick="openActivityModal()"><i class="fas fa-plus"></i> Log Activity</button>
+                </div>
+                <div id="activities-list"></div>
+            </div>
+        </div>
+
+        <!-- Inventory Page -->
+        <div id="inventory-page" class="page-content hidden">
+            <div class="section">
+                <div class="section-header">
+                    <h2><i class="fas fa-boxes"></i> Post-Harvest Inventory</h2>
+                </div>
+                <div id="inventory-list"></div>
+            </div>
+        </div>
+
+        <!-- Sales Page -->
+        <div id="sales-page" class="page-content hidden">
+            <div class="section">
+                <div class="section-header">
+                    <h2><i class="fas fa-dollar-sign"></i> Sales Transactions</h2>
+                    <button class="btn-primary" onclick="openSaleModal()"><i class="fas fa-plus"></i> Record Sale</button>
+                </div>
+                <div id="sales-list"></div>
+                <div class="section-header" style="margin-top: 1.5rem;">
+                    <h3><i class="fas fa-chart-line"></i> Financial Summary</h3>
+                </div>
+                <div id="profit-summary"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Crop Detail Modal -->
+    <div id="cropDetailModal" class="modal">
+        <div class="modal-content" style="max-width: 700px;">
+            <div class="modal-header">
+                <h3 id="cropDetailTitle">Crop Details</h3>
+                <button class="close-modal" onclick="closeModal('cropDetailModal')">&times;</button>
+            </div>
+            <div id="cropDetailContent"></div>
+        </div>
+    </div>
+
+    <!-- Crop Creation Modal -->
+    <div id="cropModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header"><h3>Plant New Crop</h3><button class="close-modal" onclick="closeModal('cropModal')">&times;</button></div>
+            <div class="form-group"><label>Crop Type *</label><select id="cropType"><option value="Maize"> Maize</option><option value="Beans">🫘 Beans</option><option value="Sorghum"> Sorghum</option><option value="Wheat"> Wheat</option><option value="Rice"> Rice</option></select></div>
+            <div class="form-group"><label>Plot Name *</label><input type="text" id="plotName" placeholder="e.g., North Field A"></div>
+            <div class="form-group"><label>Planting Date</label><input type="date" id="plantingDate"></div>
+            <button class="btn-primary" onclick="createCrop()">Plant Crop</button>
+        </div>
+    </div>
+
+    <!-- Activity Modal -->
+    <div id="activityModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header"><h3>Log Farm Activity</h3><button class="close-modal" onclick="closeModal('activityModal')">&times;</button></div>
+            <div class="form-group"><label>Crop *</label><select id="activityCrop"></select></div>
+            <div class="form-group"><label>Activity Type *</label>
+                <select id="activityType">
+                    <option value="Irrigation"> Irrigation</option>
+                    <option value="Fertilization"> Fertilization</option>
+                    <option value="Pest Control"> Pest Control</option>
+                    <option value="Disease Control"> Disease Control</option>
+                    <option value="Weeding"> Weeding</option>
+                </select>
+            </div>
+            <div class="form-group"><label>Date</label><input type="date" id="activityDate"></div>
+            <div class="form-group"><label>Notes</label><textarea id="activityNotes" rows="3" placeholder="Additional details..."></textarea></div>
+            <button class="btn-primary" onclick="addActivity()">Log Activity</button>
+        </div>
+    </div>
+
+    <!-- Health Update Modal -->
+    <div id="healthModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header"><h3>Update Crop Health</h3><button class="close-modal" onclick="closeModal('healthModal')">&times;</button></div>
+            <div class="form-group"><label>Health Status *</label>
+                <select id="healthStatus">
+                    <option value="Healthy"> Healthy</option>
+                    <option value="Pest-infected"> Pest-infected</option>
+                    <option value="Diseased"> Diseased</option>
+                </select>
+            </div>
+            <div class="form-group"><label>Observations</label><textarea id="healthNotes" rows="3" placeholder="Describe symptoms or observations..."></textarea></div>
+            <button class="btn-primary" onclick="updateCropHealth()">Update Health</button>
+        </div>
+    </div>
+
+    <!-- Harvest Modal -->
+    <div id="harvestModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header"><h3>Harvest Crop</h3><button class="close-modal" onclick="closeModal('harvestModal')">&times;</button></div>
+            <div class="form-group"><label>Quantity Harvested (kg) *</label><input type="number" id="harvestQty" step="0.1" min="0.1"></div>
+            <div class="form-group"><label>Harvest Date</label><input type="date" id="harvestDate"></div>
+            <button class="btn-primary" onclick="harvestCrop()">Confirm Harvest</button>
+        </div>
+    </div>
+
+    <!-- Sale Modal -->
+    <div id="saleModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header"><h3>Record Sale</h3><button class="close-modal" onclick="closeModal('saleModal')">&times;</button></div>
+            <div class="form-group"><label>Crop *</label><select id="saleCrop"></select></div>
+            <div class="form-group"><label>Quantity (kg) *</label><input type="number" id="saleQty" step="0.1" min="0.1"></div>
+            <div class="form-group"><label>Price per kg (RWF) *</label><input type="number" id="salePrice" step="0.1" min="0"></div>
+            <button class="btn-primary" onclick="recordSale()">Record Sale</button>
+        </div>
+    </div>
+
+    <script>
+        // Data Structures
+        let crops = [];
+        let activities = [];
+        let healthLogs = [];
+        let inventory = [];
+        let sales = [];
+        let nextId = 100;
+        let selectedCropId = null;
+
+        // Notification System
+        function showNotification(message, type = 'success') {
+            const container = document.getElementById('notificationContainer');
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'}"></i><span>${message}</span>`;
+            container.appendChild(notification);
+            setTimeout(() => notification.remove(), 3000);
+        }
+
+        // Initialize Demo Data
+        function initDemoData() {
+            const today = new Date().toISOString().slice(0,10);
+            crops = [
+                { id: 1, name: 'Maize', plot: 'North Field A', plantingDate: '2026-02-15', status: 'Growing' },
+                { id: 2, name: 'Beans', plot: 'East Field B', plantingDate: '2026-02-20', status: 'Planted' },
+                { id: 3, name: 'Sorghum', plot: 'West Field C', plantingDate: '2026-01-10', status: 'Ready for harvest' }
+            ];
+            
+            healthLogs = [
+                { id: 1, cropId: 1, status: 'Healthy', notes: 'Good growth', date: '2026-02-20' },
+                { id: 2, cropId: 2, status: 'Healthy', notes: 'Germination successful', date: '2026-02-25' },
+                { id: 3, cropId: 3, status: 'Pest-infected', notes: 'Minor aphid infestation detected', date: '2026-02-22' }
+            ];
+            
+            activities = [
+                { id: 1, cropId: 1, cropName: 'Maize', type: 'Irrigation', date: '2026-02-18', notes: 'Regular watering' },
+                { id: 2, cropId: 1, cropName: 'Maize', type: 'Fertilization', date: '2026-02-25', notes: 'Applied organic fertilizer' },
+                { id: 3, cropId: 3, cropName: 'Sorghum', type: 'Pest Control', date: '2026-02-22', notes: 'Applied pesticide' }
+            ];
+            
+            inventory = [
+                { id: 1, cropType: 'Maize', totalQty: 500, soldQty: 50 },
+                { id: 2, cropType: 'Beans', totalQty: 200, soldQty: 0 }
+            ];
+            
+            sales = [
+                { id: 1, date: '2026-03-15', cropType: 'Maize', qty: 50, price: 800, total: 40000 }
+            ];
+            
+            updateRemainingStock();
+        }
+
+        function getCurrentHealth(cropId) {
+            const logs = healthLogs.filter(l => l.cropId === cropId).sort((a,b) => new Date(b.date) - new Date(a.date));
+            return logs.length > 0 ? logs[0] : null;
+        }
+
+        function updateRemainingStock() {
+            inventory.forEach(inv => {
+                const sold = sales.filter(s => s.cropType === inv.cropType).reduce((sum, s) => sum + s.qty, 0);
+                inv.soldQty = sold;
+            });
+        }
+
+        function getCropStatusColor(status) {
+            const colors = { 'Planted': 'planted', 'Growing': 'growing', 'Ready for harvest': 'ready', 'Harvested': 'harvested' };
+            return colors[status] || 'planted';
+        }
+
+        // Create Crop
+        function createCrop() {
+            const name = document.getElementById('cropType').value;
+            const plot = document.getElementById('plotName').value.trim();
+            if (!plot) { showNotification('Please enter plot name', 'error'); return; }
+            
+            const plantingDate = document.getElementById('plantingDate').value || new Date().toISOString().slice(0,10);
+            const newCrop = { id: nextId++, name, plot, plantingDate, status: 'Planted' };
+            crops.push(newCrop);
+            
+            // Add planting activity
+            activities.push({ id: nextId++, cropId: newCrop.id, cropName: name, type: 'Planting', date: plantingDate, notes: `Planted in ${plot}` });
+            
+            // Add initial health log
+            healthLogs.push({ id: nextId++, cropId: newCrop.id, status: 'Healthy', notes: 'New crop planted', date: plantingDate });
+            
+            closeModal('cropModal');
+            refreshAll();
+            showNotification(` ${name} planted successfully in ${plot}!`);
+            
+            // Reset form
+            document.getElementById('plotName').value = '';
+        }
+
+        // Add Activity
+        function addActivity() {
+            const cropId = parseInt(document.getElementById('activityCrop').value);
+            const crop = crops.find(c => c.id === cropId);
+            if (!crop) { showNotification('Invalid crop', 'error'); return; }
+            if (crop.status === 'Harvested') { showNotification('Cannot add activities to harvested crops', 'error'); return; }
+            
+            const type = document.getElementById('activityType').value;
+            const date = document.getElementById('activityDate').value || new Date().toISOString().slice(0,10);
+            const notes = document.getElementById('activityNotes').value;
+            
+            activities.push({ id: nextId++, cropId, cropName: crop.name, type, date, notes });
+            
+            // Update crop status based on activities and time
+            const daysSincePlanting = (new Date(date) - new Date(crop.plantingDate)) / (1000 * 3600 * 24);
+            if (crop.status === 'Planted' && daysSincePlanting >= 7) crop.status = 'Growing';
+            if (crop.status === 'Growing' && daysSincePlanting >= 60) crop.status = 'Ready for harvest';
+            
+            closeModal('activityModal');
+            refreshAll();
+            showNotification(` ${type} logged for ${crop.name}`);
+            
+            document.getElementById('activityNotes').value = '';
+        }
+
+        // Update Health
+        function updateCropHealth() {
+            const status = document.getElementById('healthStatus').value;
+            const notes = document.getElementById('healthNotes').value;
+            const date = new Date().toISOString().slice(0,10);
+            
+            healthLogs.push({ id: nextId++, cropId: selectedCropId, status, notes, date });
+            
+            // Add health check activity
+            const crop = crops.find(c => c.id === selectedCropId);
+            if (crop) {
+                activities.push({ id: nextId++, cropId: selectedCropId, cropName: crop.name, type: 'Health Check', date, notes: `Health status: ${status} - ${notes}` });
+            }
+            
+            closeModal('healthModal');
+            refreshAll();
+            showNotification(`🩺 Health status updated to ${status}`);
+        }
+
+        // Harvest Crop
+        function harvestCrop() {
+            const crop = crops.find(c => c.id === selectedCropId);
+            if (!crop) return;
+            if (crop.status === 'Harvested') { showNotification('Crop already harvested', 'error'); return; }
+            
+            const qty = parseFloat(document.getElementById('harvestQty').value);
+            if (isNaN(qty) || qty <= 0) { showNotification('Please enter valid quantity', 'error'); return; }
+            
+            const harvestDate = document.getElementById('harvestDate').value || new Date().toISOString().slice(0,10);
+            crop.status = 'Harvested';
+            
+            activities.push({ id: nextId++, cropId: crop.id, cropName: crop.name, type: 'Harvest', date: harvestDate, notes: `Harvested ${qty} kg` });
+            
+            // Add to inventory
+            const existingInv = inventory.find(i => i.cropType === crop.name);
+            if (existingInv) {
+                existingInv.totalQty += qty;
+            } else {
+                inventory.push({ id: nextId++, cropType: crop.name, totalQty: qty, soldQty: 0 });
+            }
+            updateRemainingStock();
+            
+            closeModal('harvestModal');
+            refreshAll();
+            showNotification(` Harvested ${qty} kg of ${crop.name}!`);
+        }
+
+        // Record Sale
+        function recordSale() {
+            const cropType = document.getElementById('saleCrop').value;
+            const qty = parseFloat(document.getElementById('saleQty').value);
+            const price = parseFloat(document.getElementById('salePrice').value);
+            
+            if (isNaN(qty) || qty <= 0) { showNotification('Please enter valid quantity', 'error'); return; }
+            if (isNaN(price) || price <= 0) { showNotification('Please enter valid price', 'error'); return; }
+            
+            const inv = inventory.find(i => i.cropType === cropType);
+            const available = inv ? inv.totalQty - inv.soldQty : 0;
+            
+            if (available < qty) { showNotification(`Insufficient stock! Available: ${available} kg`, 'error'); return; }
+            
+            const total = qty * price;
+            const sale = { id: nextId++, date: new Date().toISOString().slice(0,10), cropType, qty, price, total };
+            sales.push(sale);
+            
+            updateRemainingStock();
+            closeModal('saleModal');
+            refreshAll();
+            showNotification(` Sale recorded: ${qty} kg of ${cropType} for ${total.toLocaleString()} RWF`);
+        }
+
+        // Delete Crop
+        function deleteCrop(cropId) {
+            if (confirm('Delete this crop? All activities and health records will be removed.')) {
+                crops = crops.filter(c => c.id !== cropId);
+                activities = activities.filter(a => a.cropId !== cropId);
+                healthLogs = healthLogs.filter(h => h.cropId !== cropId);
+                refreshAll();
+                showNotification('Crop deleted successfully');
+            }
+        }
+
+        // Delete Activity
+        function deleteActivity(activityId) {
+            if (confirm('Delete this activity?')) {
+                activities = activities.filter(a => a.id !== activityId);
+                refreshAll();
+                showNotification('Activity deleted');
+            }
+        }
+
+        // View Crop Detail
+        function viewCropDetail(cropId) {
+            const crop = crops.find(c => c.id === cropId);
+            if (!crop) return;
+            
+            const cropHealthLogs = healthLogs.filter(h => h.cropId === cropId).sort((a,b) => new Date(b.date) - new Date(a.date));
+            const cropActivities = activities.filter(a => a.cropId === cropId).sort((a,b) => new Date(b.date) - new Date(a.date));
+            const currentHealth = cropHealthLogs[0];
+            
+            document.getElementById('cropDetailTitle').innerHTML = `${crop.name} - ${crop.plot}`;
+            document.getElementById('cropDetailContent').innerHTML = `
+                <div style="margin-bottom: 1.5rem;">
+                    <p><strong> Planting Date:</strong> ${crop.plantingDate}</p>
+                    <p><strong> Status:</strong> <span class="status-badge status-${getCropStatusColor(crop.status)}">${crop.status}</span></p>
+                    <p><strong> Current Health:</strong> <span class="status-badge status-${currentHealth?.status?.toLowerCase().replace(/[ -]/g, '-') || 'healthy'}">${currentHealth?.status || 'Not recorded'}</span></p>
+                    <button class="btn-secondary" onclick="openHealthModalForCrop(${crop.id})"><i class="fas fa-heartbeat"></i> Update Health</button>
+                    ${crop.status !== 'Harvested' ? `<button class="btn-secondary" onclick="openHarvestModalForCrop(${crop.id})"><i class="fas fa-cut"></i> Harvest</button>` : ''}
+                    <button class="btn-danger" onclick="deleteCrop(${crop.id}); closeModal('cropDetailModal');"><i class="fas fa-trash"></i> Delete Crop</button>
+                </div>
+                <h4 style="margin: 1rem 0 0.5rem;"><i class="fas fa-history"></i> Health History</h4>
+                <div class="timeline">
+                    ${cropHealthLogs.length === 0 ? '<div class="empty-state"><i class="fas fa-heart-broken"></i><p>No health records</p></div>' : 
+                        cropHealthLogs.map(log => `
+                            <div class="timeline-item">
+                                <div class="timeline-date">${log.date}</div>
+                                <div class="timeline-title"><span class="status-badge status-${log.status?.toLowerCase().replace(/[ -]/g, '-')}">${log.status}</span></div>
+                                <div class="timeline-desc">${log.notes || 'No notes'}</div>
+                            </div>
+                        `).join('')
+                    }
+                </div>
+                <h4 style="margin: 1rem 0 0.5rem;"><i class="fas fa-clipboard-list"></i> Activity History</h4>
+                <div class="timeline">
+                    ${cropActivities.length === 0 ? '<div class="empty-state"><i class="fas fa-tasks"></i><p>No activities recorded</p></div>' :
+                        cropActivities.map(act => `
+                            <div class="timeline-item">
+                                <div class="timeline-date">${act.date}</div>
+                                <div class="timeline-title">${act.type}</div>
+                                <div class="timeline-desc">${act.notes || 'No notes'}</div>
+                            </div>
+                        `).join('')
+                    }
+                </div>
+            `;
+            document.getElementById('cropDetailModal').style.display = 'flex';
+        }
+
+        // Render Functions
+        function renderCrops() {
+            const container = document.getElementById('crops-list');
+            if (crops.length === 0) {
+                container.innerHTML = '<div class="empty-state"><i class="fas fa-seedling"></i><p>No crops yet. Start by planting your first crop!</p></div>';
+                return;
+            }
+            container.innerHTML = crops.map(crop => {
+                const health = getCurrentHealth(crop.id);
+                return `
+                    <div class="crop-card" onclick="viewCropDetail(${crop.id})">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <strong style="font-size: 1.1rem;">${crop.name}</strong><br>
+                                <small> ${crop.plot} |  ${crop.plantingDate}</small>
+                            </div>
+                            <div>
+                                <span class="status-badge status-${getCropStatusColor(crop.status)}">${crop.status}</span>
+                                ${health ? `<span class="status-badge status-${health.status.toLowerCase().replace(/[ -]/g, '-')}">${health.status}</span>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderActivities() {
+            const container = document.getElementById('activities-list');
+            if (activities.length === 0) {
+                container.innerHTML = '<div class="empty-state"><i class="fas fa-clipboard-list"></i><p>No activities logged yet. Start by logging farm activities!</p></div>';
+                return;
+            }
+            container.innerHTML = `
+                <table class="data-table">
+                    <thead><tr><th>Crop</th><th>Activity Type</th><th>Date</th><th>Notes</th><th>Actions</th></tr></thead>
+                    <tbody>
+                        ${activities.sort((a,b) => new Date(b.date) - new Date(a.date)).map(act => `
+                            <tr>
+                                <td>${act.cropName}</td>
+                                <td>${act.type}</td>
+                                <td>${act.date}</td>
+                                <td>${act.notes || '-'}</td>
+                                <td><button class="btn-danger" onclick="deleteActivity(${act.id})"><i class="fas fa-trash"></i></button></td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        function renderInventory() {
+            const container = document.getElementById('inventory-list');
+            if (inventory.length === 0) {
+                container.innerHTML = '<div class="empty-state"><i class="fas fa-box-open"></i><p>No inventory items. Harvest crops to add to inventory!</p></div>';
+                return;
+            }
+            container.innerHTML = `
+                <table class="data-table">
+                    <thead><tr><th>Crop Type</th><th>Total Harvested (kg)</th><th>Sold (kg)</th><th>Remaining Stock (kg)</th></tr></thead>
+                    <tbody>
+                        ${inventory.map(inv => {
+                            const remaining = inv.totalQty - inv.soldQty;
+                            return `<tr><td>${inv.cropType}</td><td>${inv.totalQty}</td><td>${inv.soldQty}</td><td><strong>${remaining}</strong></td></tr>`;
+                        }).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        function renderSales() {
+            const container = document.getElementById('sales-list');
+            if (sales.length === 0) {
+                container.innerHTML = '<div class="empty-state"><i class="fas fa-chart-line"></i><p>No sales recorded yet.</p></div>';
+                return;
+            }
+            container.innerHTML = `
+                <table class="data-table">
+                    <thead><tr><th>Date</th><th>Crop</th><th>Quantity (kg)</th><th>Price/kg (RWF)</th><th>Total (RWF)</th></tr></thead>
+                    <tbody>
+                        ${sales.sort((a,b) => new Date(b.date) - new Date(a.date)).map(sale => `
+                            <tr><td>${sale.date}</td><td>${sale.cropType}</td><td>${sale.qty}</td><td>${sale.price.toLocaleString()}</td><td><strong>${sale.total.toLocaleString()}</strong></td></tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+            const totalRevenue = sales.reduce((sum, s) => sum + s.total, 0);
+            document.getElementById('profit-summary').innerHTML = `<div class="stat-card"><div class="stat-value">${totalRevenue.toLocaleString()} RWF</div><div class="stat-label">Total Revenue</div></div>`;
+        }
+
+        function renderDashboard() {
+            const activeCrops = crops.filter(c => c.status !== 'Harvested').length;
+            const harvestedCrops = crops.filter(c => c.status === 'Harvested').length;
+            const totalStock = inventory.reduce((sum, i) => sum + (i.totalQty - i.soldQty), 0);
+            const totalRevenue = sales.reduce((sum, s) => sum + s.total, 0);
+            
+            document.getElementById('stats-grid').innerHTML = `
+                <div class="stat-card"><div class="stat-icon"><i class="fas fa-seedling"></i></div><div class="stat-value">${crops.length}</div><div class="stat-label">Total Crops</div></div>
+                <div class="stat-card"><div class="stat-icon"><i class="fas fa-leaf"></i></div><div class="stat-value">${activeCrops}</div><div class="stat-label">Active Crops</div></div>
+                <div class="stat-card"><div class="stat-icon"><i class="fas fa-check-circle"></i></div><div class="stat-value">${harvestedCrops}</div><div class="stat-label">Harvested</div></div>
+                <div class="stat-card"><div class="stat-icon"><i class="fas fa-box"></i></div><div class="stat-value">${totalStock} kg</div><div class="stat-label">Stock Available</div></div>
+                <div class="stat-card"><div class="stat-icon"><i class="fas fa-chart-line"></i></div><div class="stat-value">${totalRevenue.toLocaleString()} RWF</div><div class="stat-label">Total Revenue</div></div>
+            `;
+            
+            const recentActivities = [...activities].sort((a,b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
+            document.getElementById('recent-activities').innerHTML = recentActivities.length === 0 ? 
+                '<div class="empty-state"><i class="fas fa-tasks"></i><p>No recent activities</p></div>' :
+                recentActivities.map(a => `<div class="timeline-item"><div class="timeline-date">${a.date}</div><div class="timeline-title">${a.type} - ${a.cropName}</div><div class="timeline-desc">${a.notes || ''}</div></div>`).join('');
+            
+            const healthStats = { Healthy: 0, 'Pest-infected': 0, Diseased: 0 };
+            crops.forEach(c => {
+                const health = getCurrentHealth(c.id);
+                if (health) healthStats[health.status]++;
+            });
+            document.getElementById('health-summary').innerHTML = `
+                <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                    ${Object.entries(healthStats).map(([k,v]) => `<div class="stat-card" style="flex:1"><div class="stat-value">${v}</div><div class="stat-label">${k}</div></div>`).join('')}
+                </div>
+            `;
+        }
+
+        function refreshAll() {
+            renderCrops();
+            renderActivities();
+            renderInventory();
+            renderSales();
+            renderDashboard();
+            updateActivityCropSelect();
+            updateSaleCropSelect();
+        }
+
+        function updateActivityCropSelect() {
+            const select = document.getElementById('activityCrop');
+            select.innerHTML = crops.filter(c => c.status !== 'Harvested').map(c => `<option value="${c.id}">${c.name} (${c.plot}) - ${c.status}</option>`).join('');
+        }
+
+        function updateSaleCropSelect() {
+            const select = document.getElementById('saleCrop');
+            select.innerHTML = inventory.map(i => {
+                const available = i.totalQty - i.soldQty;
+                return `<option value="${i.cropType}">${i.cropType} (${available} kg available)</option>`;
+            }).join('');
+        }
+
+        // Modal Helpers
+        function openCropModal() { document.getElementById('cropModal').style.display = 'flex'; }
+        function openActivityModal() { updateActivityCropSelect(); document.getElementById('activityModal').style.display = 'flex'; }
+        function openHealthModalForCrop(cropId) { selectedCropId = cropId; document.getElementById('healthModal').style.display = 'flex'; }
+        function openHarvestModalForCrop(cropId) { selectedCropId = cropId; document.getElementById('harvestModal').style.display = 'flex'; }
+        function openSaleModal() { updateSaleCropSelect(); document.getElementById('saleModal').style.display = 'flex'; }
+        
+        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+        // Close modal on outside click
+        window.onclick = function(event) {
+            if (event.target.classList.contains('modal')) {
+                event.target.style.display = 'none';
+            }
+        }
+
+        // Navigation
+        document.querySelectorAll('.nav-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                const page = btn.dataset.page;
+                document.querySelectorAll('.page-content').forEach(p => p.classList.add('hidden'));
+                document.getElementById(`${page}-page`).classList.remove('hidden');
+            });
+        });
+
+        // Initialize
+        initDemoData();
+        refreshAll();
+    </script>
+</body>
+</html>
