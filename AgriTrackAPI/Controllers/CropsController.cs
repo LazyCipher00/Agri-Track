@@ -1,0 +1,224 @@
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using AgriTrackAPI.Data;
+using AgriTrackAPI.Models;
+using AgriTrackAPI.DTOs;
+
+namespace AgriTrackAPI.Controllers
+{
+    [Route("api/[controller]")]
+    [ApiController]
+    [Authorize]
+    public class CropsController : ControllerBase
+    {
+        private readonly ApplicationDbContext _context;
+
+        public CropsController(ApplicationDbContext context)
+        {
+            _context = context;
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetCrops()
+        {
+            var userId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!);
+
+            var crops = await _context.Crops
+                .Where(c => c.UserId == userId)
+                .OrderByDescending(c => c.PlantingDate)
+                .Select(c => new CropDto(c))
+                .ToListAsync();
+
+            return Ok(crops);
+        }
+
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetCrop(int id)
+        {
+            var userId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!);
+
+            var crop = await _context.Crops
+                .Include(c => c.Activities)
+                .Include(c => c.HealthLogs)
+                .FirstOrDefaultAsync(c => c.Id == id && c.UserId == userId);
+
+            if (crop == null)
+                return NotFound(new { message = "Crop not found" });
+
+            var cropDetail = new CropDetailDto(crop)
+            {
+                Activities = crop.Activities.OrderByDescending(a => a.ActivityDate).Select(a => new ActivityDto(a)).ToList(),
+                HealthLogs = crop.HealthLogs.OrderByDescending(h => h.LogDate).Select(h => new HealthLogDto(h)).ToList()
+            };
+
+            return Ok(cropDetail);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> CreateCrop([FromBody] CreateCropDto createDto)
+        {
+            var userId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!);
+
+            var crop = new Crop
+            {
+                UserId = userId,
+                CropType = createDto.CropType,
+                PlotName = createDto.PlotName,
+                PlantingDate = createDto.PlantingDate,
+                Status = "Planted",
+                CreatedAt = DateTime.UtcNow
+            };
+
+            _context.Crops.Add(crop);
+
+            // Auto-create planting activity
+            var activity = new Activity
+            {
+                Crop = crop,
+                ActivityType = "Planting",
+                ActivityDate = createDto.PlantingDate,
+                Notes = $"Planted in {createDto.PlotName}",
+                CreatedAt = DateTime.UtcNow
+            };
+            _context.Activities.Add(activity);
+
+            // Auto-create initial health log
+            var healthLog = new HealthLog
+            {
+                Crop = crop,
+                HealthStatus = "Healthy",
+                Notes = "New crop planted",
+                LogDate = createDto.PlantingDate,
+                CreatedAt = DateTime.UtcNow
+            };
+            _context.HealthLogs.Add(healthLog);
+
+            // Create audit log
+            var auditLog = new AuditLog
+            {
+                UserId = userId,
+                Action = "Create",
+                EntityType = "Crop",
+                Details = $"Crop created: {crop.CropType} in {crop.PlotName}",
+                IPAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
+            };
+            _context.AuditLogs.Add(auditLog);
+
+            // Single save for all operations
+            await _context.SaveChangesAsync();
+
+            // Set EntityId after save
+            auditLog.EntityId = crop.Id;
+            await _context.SaveChangesAsync();
+
+            return CreatedAtAction(nameof(GetCrop), new { id = crop.Id }, new CropDto(crop));
+        }
+
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateCrop(int id, [FromBody] UpdateCropDto updateDto)
+        {
+            var userId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!);
+
+            var crop = await _context.Crops.FirstOrDefaultAsync(c => c.Id == id && c.UserId == userId);
+
+            if (crop == null)
+                return NotFound(new { message = "Crop not found" });
+
+            crop.Status = updateDto.Status;
+            crop.UpdatedAt = DateTime.UtcNow;
+
+            var auditLog = new AuditLog
+            {
+                UserId = userId,
+                Action = "Update",
+                EntityType = "Crop",
+                EntityId = crop.Id,
+                Details = $"Crop status updated to {updateDto.Status}",
+                IPAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
+            };
+            _context.AuditLogs.Add(auditLog);
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new CropDto(crop));
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteCrop(int id)
+        {
+            var userId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!);
+
+            var crop = await _context.Crops.FirstOrDefaultAsync(c => c.Id == id && c.UserId == userId);
+
+            if (crop == null)
+                return NotFound(new { message = "Crop not found" });
+
+            var auditLog = new AuditLog
+            {
+                UserId = userId,
+                Action = "Delete",
+                EntityType = "Crop",
+                EntityId = id,
+                Details = $"Crop deleted: {crop.CropType}",
+                IPAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
+            };
+            _context.AuditLogs.Add(auditLog);
+
+            _context.Crops.Remove(crop);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Crop deleted successfully" });
+        }
+
+        [HttpPost("{id}/activities")]
+        public async Task<IActionResult> AddActivity(int id, [FromBody] CreateActivityDto createDto)
+        {
+            var userId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!);
+
+            var crop = await _context.Crops.FirstOrDefaultAsync(c => c.Id == id && c.UserId == userId);
+
+            if (crop == null)
+                return NotFound(new { message = "Crop not found" });
+
+            var activity = new Activity
+            {
+                CropId = id,
+                ActivityType = createDto.ActivityType,
+                ActivityDate = createDto.ActivityDate,
+                Notes = createDto.Notes,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            _context.Activities.Add(activity);
+            await _context.SaveChangesAsync();
+
+            return Ok(new ActivityDto(activity));
+        }
+
+        [HttpPost("{id}/health-logs")]
+        public async Task<IActionResult> AddHealthLog(int id, [FromBody] CreateHealthLogDto createDto)
+        {
+            var userId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!);
+
+            var crop = await _context.Crops.FirstOrDefaultAsync(c => c.Id == id && c.UserId == userId);
+
+            if (crop == null)
+                return NotFound(new { message = "Crop not found" });
+
+            var healthLog = new HealthLog
+            {
+                CropId = id,
+                HealthStatus = createDto.HealthStatus,
+                Notes = createDto.Notes,
+                LogDate = createDto.LogDate,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            _context.HealthLogs.Add(healthLog);
+            await _context.SaveChangesAsync();
+
+            return Ok(new HealthLogDto(healthLog));
+        }
+    }
+}

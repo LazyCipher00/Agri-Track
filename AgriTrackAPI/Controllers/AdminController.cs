@@ -1,0 +1,290 @@
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using AgriTrackAPI.Data;
+using AgriTrackAPI.Models;
+using AgriTrackAPI.DTOs;
+
+namespace AgriTrackAPI.Controllers
+{
+    [Route("api/[controller]")]
+    [ApiController]
+    [Authorize(Roles = "Admin")]
+    public class AdminController : ControllerBase
+    {
+        private readonly ApplicationDbContext _context;
+
+        public AdminController(ApplicationDbContext context)
+        {
+            _context = context;
+        }
+
+        [HttpGet("dashboard-stats")]
+        public async Task<IActionResult> GetDashboardStats()
+        {
+            var stats = new
+            {
+                TotalUsers = await _context.Users.CountAsync(),
+                ActiveUsers = await _context.Users.CountAsync(u => u.IsActive),
+                TotalCrops = await _context.Crops.CountAsync(),
+                ActiveCrops = await _context.Crops.CountAsync(c => c.Status != "Harvested"),
+                HarvestedCrops = await _context.Crops.CountAsync(c => c.Status == "Harvested"),
+                TotalSales = await _context.Sales.SumAsync(s => s.TotalAmount),
+                TotalActivities = await _context.Activities.CountAsync(),
+                RecentUsers = await _context.Users
+                    .OrderByDescending(u => u.CreatedAt)
+                    .Take(5)
+                    .Select(u => new UserDto(u))
+                    .ToListAsync(),
+                RecentActivities = await _context.Activities
+                    .Include(a => a.Crop)
+                    .OrderByDescending(a => a.ActivityDate)
+                    .Take(10)
+                    .Select(a => new ActivityDto(a))
+                    .ToListAsync()
+            };
+
+            return Ok(stats);
+        }
+
+        [HttpGet("users")]
+        public async Task<IActionResult> GetUsers([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+        {
+            var query = _context.Users.AsQueryable();
+
+            var totalCount = await query.CountAsync();
+            var users = await query
+                .OrderByDescending(u => u.CreatedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .Select(u => new UserDetailDto(u))
+                .ToListAsync();
+
+            return Ok(new { users, totalCount, page, pageSize });
+        }
+
+        [HttpGet("users/{id}")]
+        public async Task<IActionResult> GetUser(int id)
+        {
+            var user = await _context.Users
+                .Include(u => u.Crops)
+                .Include(u => u.Sales)
+                .FirstOrDefaultAsync(u => u.Id == id);
+
+            if (user == null)
+                return NotFound(new { message = "User not found" });
+
+            var userDetail = new UserDetailDto(user)
+            {
+                CropCount = user.Crops.Count,
+                SalesTotal = user.Sales.Sum(s => s.TotalAmount),
+                RecentCrops = user.Crops.OrderByDescending(c => c.PlantingDate).Take(5).Select(c => new CropDto(c)).ToList()
+            };
+
+            return Ok(userDetail);
+        }
+
+        [HttpPut("users/{id}/toggle-status")]
+        public async Task<IActionResult> ToggleUserStatus(int id)
+        {
+            var user = await _context.Users.FindAsync(id);
+
+            if (user == null)
+                return NotFound(new { message = "User not found" });
+
+            if (user.Role == "Admin")
+            {
+                var adminCount = await _context.Users.CountAsync(u => u.Role == "Admin" && u.IsActive);
+                if (adminCount <= 1 && user.IsActive)
+                    return BadRequest(new { message = "Cannot deactivate the last admin user" });
+            }
+
+            user.IsActive = !user.IsActive;
+            user.UpdatedAt = DateTime.UtcNow;
+
+            // Create audit log
+            var auditLog = new AuditLog
+            {
+                UserId = user.Id,
+                Action = user.IsActive ? "Activate" : "Deactivate",
+                EntityType = "User",
+                EntityId = user.Id,
+                Details = $"User status toggled to {(user.IsActive ? "active" : "inactive")}",
+                IPAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
+            };
+            _context.AuditLogs.Add(auditLog);
+
+            // Single save for both operations
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = $"User {(user.IsActive ? "activated" : "deactivated")} successfully" });
+        }
+
+        [HttpDelete("users/{id}")]
+        public async Task<IActionResult> DeleteUser(int id)
+        {
+            var user = await _context.Users.FindAsync(id);
+
+            if (user == null)
+                return NotFound(new { message = "User not found" });
+
+            if (user.Role == "Admin")
+            {
+                var adminCount = await _context.Users.CountAsync(u => u.Role == "Admin");
+                if (adminCount <= 1)
+                    return BadRequest(new { message = "Cannot delete the last admin user" });
+            }
+
+            // Create audit log before deletion
+            var auditLog = new AuditLog
+            {
+                UserId = null,
+                Action = "Delete",
+                EntityType = "User",
+                EntityId = id,
+                Details = $"User {user.Email} deleted",
+                IPAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
+            };
+            _context.AuditLogs.Add(auditLog);
+
+            _context.Users.Remove(user);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "User deleted successfully" });
+        }
+
+        [HttpPut("users/{id}/make-admin")]
+        public async Task<IActionResult> MakeAdmin(int id)
+        {
+            var user = await _context.Users.FindAsync(id);
+
+            if (user == null)
+                return NotFound(new { message = "User not found" });
+
+            user.Role = "Admin";
+            user.UpdatedAt = DateTime.UtcNow;
+
+            var auditLog = new AuditLog
+            {
+                UserId = null,
+                Action = "Update",
+                EntityType = "User",
+                EntityId = user.Id,
+                Details = $"User {user.Email} promoted to admin",
+                IPAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
+            };
+            _context.AuditLogs.Add(auditLog);
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "User promoted to admin successfully" });
+        }
+
+        [HttpPost("create-admin")]
+        public async Task<IActionResult> CreateAdmin([FromBody] CreateAdminDto createDto)
+        {
+            if (string.IsNullOrWhiteSpace(createDto.Email) || string.IsNullOrWhiteSpace(createDto.Password))
+                return BadRequest(new { message = "Email and password are required" });
+
+            if (await _context.Users.AnyAsync(u => u.Email == createDto.Email))
+                return BadRequest(new { message = "Email already registered" });
+
+            try
+            {
+                var admin = new User
+                {
+                    FullName = createDto.FullName,
+                    Email = createDto.Email,
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword(createDto.Password),
+                    FarmName = createDto.FarmName ?? "Admin Farm",
+                    Role = "Admin",
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                _context.Users.Add(admin);
+                
+                var auditLog = new AuditLog
+                {
+                    UserId = admin.Id,
+                    Action = "Create",
+                    EntityType = "AdminUser",
+                    EntityId = admin.Id,
+                    Details = $"Admin user created: {admin.Email}",
+                    IPAddress = HttpContext.Connection.RemoteIpAddress?.ToString()
+                };
+                _context.AuditLogs.Add(auditLog);
+
+                await _context.SaveChangesAsync();
+
+                return Ok(new { message = "Admin user created successfully", user = new UserDto(admin) });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Failed to create admin user", error = ex.Message });
+            }
+        }
+
+        [HttpGet("audit-logs")]
+        public async Task<IActionResult> GetAuditLogs([FromQuery] int page = 1, [FromQuery] int pageSize = 50)
+        {
+            var query = _context.AuditLogs
+                .Include(a => a.User)
+                .AsQueryable();
+
+            var totalCount = await query.CountAsync();
+            var logs = await query
+                .OrderByDescending(l => l.CreatedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .Select(l => new AuditLogDto(l))
+                .ToListAsync();
+
+            return Ok(new { logs, totalCount, page, pageSize });
+        }
+
+        [HttpGet("system-stats")]
+        public async Task<IActionResult> GetSystemStats()
+        {
+            var thirtyDaysAgo = DateTime.UtcNow.AddDays(-30);
+
+            var stats = new
+            {
+                UserStats = new
+                {
+                    Total = await _context.Users.CountAsync(),
+                    Active = await _context.Users.CountAsync(u => u.IsActive),
+                    NewThisMonth = await _context.Users.CountAsync(u => u.CreatedAt >= thirtyDaysAgo),
+                    ByRole = await _context.Users
+                        .GroupBy(u => u.Role)
+                        .Select(g => new { Role = g.Key, Count = g.Count() })
+                        .ToListAsync()
+                },
+                CropStats = new
+                {
+                    Total = await _context.Crops.CountAsync(),
+                    ByStatus = await _context.Crops
+                        .GroupBy(c => c.Status)
+                        .Select(g => new { Status = g.Key, Count = g.Count() })
+                        .ToListAsync(),
+                    ByType = await _context.Crops
+                        .GroupBy(c => c.CropType)
+                        .Select(g => new { Type = g.Key, Count = g.Count() })
+                        .OrderByDescending(x => x.Count)
+                        .Take(5)
+                        .ToListAsync()
+                },
+                SalesStats = new
+                {
+                    TotalRevenue = await _context.Sales.SumAsync(s => s.TotalAmount),
+                    ThisMonth = await _context.Sales
+                        .Where(s => s.SaleDate >= thirtyDaysAgo)
+                        .SumAsync(s => s.TotalAmount),
+                    TotalTransactions = await _context.Sales.CountAsync()
+                }
+            };
+
+            return Ok(stats);
+        }
+    }
+}

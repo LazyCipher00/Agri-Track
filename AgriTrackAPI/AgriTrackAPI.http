@@ -1,0 +1,47 @@
+@AgriTrackAPI_HostAddress = http://localhost:5241
+
+### Health Check
+GET {{AgriTrackAPI_HostAddress}}/api/Health
+Accept: application/json
+
+### Database Status
+GET {{AgriTrackAPI_HostAddress}}/api/Health/database
+Accept: application/json
+
+### Debug Info (shows all users)
+GET {{AgriTrackAPI_HostAddress}}/api/Health/debug
+Accept: application/json
+
+### Register Test User
+POST {{AgriTrackAPI_HostAddress}}/api/Auth/register
+Content-Type: application/json
+
+{
+  "fullName": "Test User",
+  "email": "test@example.com",
+  "password": "Test@12345",
+  "farmName": "Test Farm"
+}
+
+### Login Test
+POST {{AgriTrackAPI_HostAddress}}/api/Auth/login
+Content-Type: application/json
+
+{
+  "email": "test@example.com",
+  "password": "Test@12345",
+  "skipOTP": false
+}
+
+### Admin Login Test
+POST {{AgriTrackAPI_HostAddress}}/api/Auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@example.com",
+  "password": "Admin@12345",
+  "skipOTP": true
+}
+
+###
+

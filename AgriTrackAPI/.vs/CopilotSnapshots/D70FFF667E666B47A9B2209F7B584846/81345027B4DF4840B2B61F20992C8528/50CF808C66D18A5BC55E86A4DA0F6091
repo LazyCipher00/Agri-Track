@@ -1,0 +1,123 @@
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using AgriTrackAPI.Data;
+using AgriTrackAPI.Models;
+using AgriTrackAPI.DTOs;
+
+namespace AgriTrackAPI.Controllers
+{
+    [Route("api/[controller]")]
+    [ApiController]
+    [Authorize]
+    public class InventoryController : ControllerBase
+    {
+        private readonly ApplicationDbContext _context;
+
+        public InventoryController(ApplicationDbContext context)
+        {
+            _context = context;
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetInventory()
+        {
+            var userId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!);
+
+            var inventory = await _context.Inventories
+                .Where(i => i.UserId == userId)
+                .OrderBy(i => i.CropType)
+                .Select(i => new InventoryDto(i))
+                .ToListAsync();
+
+            return Ok(inventory);
+        }
+
+        [HttpPost("harvest")]
+        public async Task<IActionResult> AddHarvest([FromBody] HarvestDto harvestDto)
+        {
+            var userId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!);
+
+            // Update crop status
+            var crop = await _context.Crops.FirstOrDefaultAsync(c => c.Id == harvestDto.CropId && c.UserId == userId);
+
+            if (crop == null)
+                return NotFound(new { message = "Crop not found" });
+
+            crop.Status = "Harvested";
+            crop.UpdatedAt = DateTime.UtcNow;
+
+            // Add harvest activity
+            var activity = new Activity
+            {
+                CropId = crop.Id,
+                ActivityType = "Harvest",
+                ActivityDate = harvestDto.HarvestDate,
+                Notes = $"Harvested {harvestDto.Quantity} kg",
+                CreatedAt = DateTime.UtcNow
+            };
+            _context.Activities.Add(activity);
+
+            // Update inventory
+            var inventory = await _context.Inventories
+                .FirstOrDefaultAsync(i => i.UserId == userId && i.CropType == crop.CropType);
+
+            if (inventory == null)
+            {
+                inventory = new Inventory
+                {
+                    UserId = userId,
+                    CropType = crop.CropType,
+                    TotalQuantity = harvestDto.Quantity,
+                    SoldQuantity = 0,
+                    Unit = "kg",
+                    CreatedAt = DateTime.UtcNow
+                };
+                _context.Inventories.Add(inventory);
+            }
+            else
+            {
+                inventory.TotalQuantity += harvestDto.Quantity;
+                inventory.UpdatedAt = DateTime.UtcNow;
+            }
+
+            await _context.SaveChangesAsync();
+            return Ok(new InventoryDto(inventory));
+        }
+
+        [HttpPost("sale")]
+        public async Task<IActionResult> AddSale([FromBody] CreateSaleDto saleDto)
+        {
+            var userId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!);
+
+            var inventory = await _context.Inventories
+                .FirstOrDefaultAsync(i => i.UserId == userId && i.CropType == saleDto.CropType);
+
+            if (inventory == null)
+                return BadRequest(new { message = "No inventory found for this crop type" });
+
+            var available = inventory.TotalQuantity - inventory.SoldQuantity;
+            if (available < saleDto.Quantity)
+                return BadRequest(new { message = $"Insufficient stock. Available: {available} kg" });
+
+            var sale = new Sale
+            {
+                UserId = userId,
+                CropType = saleDto.CropType,
+                Quantity = saleDto.Quantity,
+                PricePerUnit = saleDto.PricePerUnit,
+                TotalAmount = saleDto.Quantity * saleDto.PricePerUnit,
+                SaleDate = saleDto.SaleDate,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            _context.Sales.Add(sale);
+
+            inventory.SoldQuantity += saleDto.Quantity;
+            inventory.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+            return Ok(new SaleDto(sale));
+        }
+    }
+}

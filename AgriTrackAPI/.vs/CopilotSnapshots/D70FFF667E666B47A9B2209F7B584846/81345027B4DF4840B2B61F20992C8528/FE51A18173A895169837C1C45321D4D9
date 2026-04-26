@@ -1,0 +1,36 @@
+﻿namespace AgriTrackAPI.DTOs
+{
+    public class RegisterDto
+    {
+        public string FullName { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
+        public string? FarmName { get; set; }
+    }
+
+    public class LoginDto
+    {
+        public string Email { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
+        public bool SkipOTP { get; set; } = false;
+    }
+
+    public class VerifyOtpDto
+    {
+        public string Email { get; set; } = string.Empty;
+        public string OTPCode { get; set; } = string.Empty;
+        public string Purpose { get; set; } = "Login";
+    }
+
+    public class RequestPasswordResetDto
+    {
+        public string Email { get; set; } = string.Empty;
+    }
+
+    public class ResetPasswordDto
+    {
+        public string Email { get; set; } = string.Empty;
+        public string OTPCode { get; set; } = string.Empty;
+        public string NewPassword { get; set; } = string.Empty;
+    }
+}

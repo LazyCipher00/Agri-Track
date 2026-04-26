@@ -1,0 +1,129 @@
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using AgriTrackAPI.Data;
+using AgriTrackAPI.Models;
+using AgriTrackAPI.DTOs;
+
+namespace AgriTrackAPI.Controllers
+{
+    [Route("api/[controller]")]
+    [ApiController]
+    [Authorize]
+    public class SalesController : ControllerBase
+    {
+        private readonly ApplicationDbContext _context;
+
+        public SalesController(ApplicationDbContext context)
+        {
+            _context = context;
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetSales()
+        {
+            var userId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!);
+
+            var sales = await _context.Sales
+                .Where(s => s.UserId == userId)
+                .OrderByDescending(s => s.SaleDate)
+                .Select(s => new SaleDto(s))
+                .ToListAsync();
+
+            return Ok(sales);
+        }
+
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetSale(int id)
+        {
+            var userId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!);
+
+            var sale = await _context.Sales
+                .FirstOrDefaultAsync(s => s.Id == id && s.UserId == userId);
+
+            if (sale == null)
+                return NotFound(new { message = "Sale not found" });
+
+            return Ok(new SaleDto(sale));
+        }
+
+        [HttpGet("stats")]
+        public async Task<IActionResult> GetStats()
+        {
+            var userId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!);
+
+            var sales = await _context.Sales
+                .Where(s => s.UserId == userId)
+                .ToListAsync();
+
+            var stats = new
+            {
+                TotalRevenue = sales.Sum(s => s.TotalAmount),
+                TotalTransactions = sales.Count,
+                TotalQuantity = sales.Sum(s => s.Quantity),
+                AveragePrice = sales.Any() ? sales.Average(s => s.PricePerUnit) : 0,
+                ThisMonth = sales.Where(s => s.SaleDate.Month == DateTime.UtcNow.Month).Sum(s => s.TotalAmount)
+            };
+
+            return Ok(stats);
+        }
+
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateSale(int id, [FromBody] UpdateSaleDto updateDto)
+        {
+            var userId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!);
+
+            var sale = await _context.Sales
+                .FirstOrDefaultAsync(s => s.Id == id && s.UserId == userId);
+
+            if (sale == null)
+                return NotFound(new { message = "Sale not found" });
+
+            var inventory = await _context.Inventories
+                .FirstOrDefaultAsync(i => i.UserId == userId && i.CropType == sale.CropType);
+
+            if (inventory != null)
+            {
+                // Adjust inventory sold quantity
+                inventory.SoldQuantity = inventory.SoldQuantity - sale.Quantity + updateDto.Quantity;
+                inventory.UpdatedAt = DateTime.UtcNow;
+            }
+
+            sale.Quantity = updateDto.Quantity;
+            sale.PricePerUnit = updateDto.PricePerUnit;
+            sale.TotalAmount = updateDto.Quantity * updateDto.PricePerUnit;
+
+            await _context.SaveChangesAsync();
+
+            await LogAuditAsync(userId, "Update", "Sale", sale.Id, $"Sale updated: {sale.CropType}");
+
+            return Ok(new SaleDto(sale));
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteSale(int id)
+        {
+            var userId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value!);
+
+            var sale = await _context.Sales
+                .FirstOrDefaultAsync(s => s.Id == id && s.UserId == userId);
+
+            if (sale == null)
+                return NotFound(new { message = "Sale not found" });
+
+            var inventory = await _context.Inventories
+                .FirstOrDefaultAsync(i => i.UserId == userId && i.CropType == sale.CropType);
+
+            if (inventory != null)
+            {
+                inventory.SoldQuantity -= sale.Quantity;
+                inventory.UpdatedAt = DateTime.UtcNow;
+            }
+
+            _context.Sales.Remove(sale);
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Sale deleted successfully" });
+        }
+    }
+}
